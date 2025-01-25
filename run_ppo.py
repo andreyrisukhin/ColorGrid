@@ -27,7 +27,7 @@ class StepData:
     loss: float
     explained_var: float
     goal_info: torch.Tensor
-    collected_blocks_goal: torch.Tensor # 0 or 1 # TODO update to bool?
+    collected_blocks_goal: torch.Tensor # 0 or 1
     collected_blocks_incorrect: torch.Tensor # 0 or 1
 
 
@@ -246,9 +246,7 @@ def step(
         step_actions = [{agent: step_actions[agent][i] for agent in step_actions} for i in range(len(step_actions[list(models.keys())[0]]))]
 
         # Step the environment, and return results.
-        next_observation_dicts, reward_dicts, terminated_dicts, truncation_dicts, info_dicts, blocks_collected_dicts = list(zip(*[env.step(step_actions[i]) for i, env in enumerate(envs)])) # TODO this is where block pickup tracking comes from
-        
-        
+        next_observation_dicts, reward_dicts, terminated_dicts, truncation_dicts, info_dicts, blocks_collected_dicts = list(zip(*[env.step(step_actions[i]) for i, env in enumerate(envs)]))
         
         next_observations = {agent: torch.stack([obs_dict[agent]['observation'] for obs_dict in next_observation_dicts]) for agent in models}
         next_goal_info = {agent: np.array([obs_dict[agent]['goal_info'] for obs_dict in next_observation_dicts]) for agent in models}
@@ -263,7 +261,6 @@ def step(
             # blocks_collected_dict is 1 at a time. Append the latest value to appropriate tracker.
             all_collect_blocks_goal[agent][step] = torch.tensor([bloc_dict[agent]["goal"] for bloc_dict in blocks_collected_dicts]).to(models[agent].device)
             all_collect_blocks_incorrect[agent][step] = torch.tensor([bloc_dict[agent]["incorrect"] for bloc_dict in blocks_collected_dicts]).to(models[agent].device)
-            # TODO ensure we're appending correctly
 
         next_dones = {agent: np.logical_or([int(terminated[agent]) for terminated in terminated_dicts], [int(truncated[agent]) for truncated in truncation_dicts]) for agent in models}
         num_goals_switched = sum(env.goal_switched for env in envs) # type: ignore
@@ -443,16 +440,12 @@ def train(
         log_to_wandb: bool = True,  # Whether to enable logging to weights and biases
         seed: int = 42,  # Random seed
 ):
-    assert positive_reward >= 0, "Positive reward must be nonnegative."
-    # assert negative_reward <= 0, "Negative reward must be nonpositive." # TODO can experiment with this later, for now adding asserts due to errors in using negative rewards.
-    # todo rename to 'reward correct' and 'reward incorrect', clearer wrt sign error.
-    assert negative_reward >= 0, "Negative reward was previously nonnegative. See if this helps." # TODO we need to clean the code.
-
+    
     if resume_iter:
         assert resume_wandb_id is not None, "Must provide W&B ID to resume from checkpoint"
 
     if log_to_wandb:
-        wandb.init(entity='kavel', project='help-the-human', name=run_name, resume=('must' if resume_wandb_id else False), id=resume_wandb_id)
+        wandb.init(entity='wandb_id', project='project', name=run_name, resume=('must' if resume_wandb_id else False), id=resume_wandb_id)
     os.makedirs(f'results/{run_name}', exist_ok=True)
 
     torch.manual_seed(seed)
@@ -604,7 +597,6 @@ def train(
                 'action_entropy': results.action_entropies.mean(),
                 'collected_goal_blocks': results.collected_blocks_goal.sum(dim=0).mean(),
                 'collected_incorrect_blocks': results.collected_blocks_incorrect.sum(dim=0).mean(),
-                # 'goal_value': results.goal_info.sum(dim=0).mean(), This is meaningless, avg would only show. We want specific times of switch and the blocks at those times. We can write an eval script to run checkpoints and compare. 
             }
         metrics['timesteps'] = (iteration + 1) * batch_size
         metrics['num_goals_switched'] = num_goals_switched
@@ -643,10 +635,11 @@ def train(
             env_seeds[i] += len(envs)
 
     for agent_name, model in models.items():
+        print(iteration)
         torch.save(model.state_dict(), f'results/{run_name}/{agent_name}_{iteration=}.pth')
         optimizer = optimizers[agent_name]
         torch.save(optimizer.state_dict(), f'results/{run_name}/{agent_name}_optimizer_{iteration=}.pth')
 
-
 if __name__ == '__main__':
     Fire(train)
+    

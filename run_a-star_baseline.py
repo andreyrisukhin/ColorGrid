@@ -5,8 +5,7 @@ import numpy as np
 import tqdm
 import time
 
-
-def run_a_star_simulation(num_runs=100): 
+def run_a_star_simulation(num_runs=5): 
     os.system('cls' if os.name == 'nt' else 'clear')
     final_leader_scores, final_follower_scores = np.zeros(num_runs), np.zeros(num_runs)
     for seed in tqdm.tqdm(range(num_runs)):
@@ -27,16 +26,13 @@ def run_a_star_simulation(num_runs=100):
                 'leader': a_star_policy_leader(env, agent=env.leader),
                 'follower': a_star_policy_follower(env, agent=env.follower)
             }
-            _, rewards, _, _, _ = env.step(actions)
+            _, rewards, _, _, _, _, _ = env.step(actions)
             leader_score += rewards['leader']
             follower_score += rewards['follower']
-            combined_score = leader_score + follower_score
             if rewards['leader'] == 1:
                 a_star_policy_follower.goal_block_color = a_star_policy_leader.goal_block_color
 
             os.system('cls' if os.name == 'nt' else 'clear')
-            # env.render()
-            # print(f'Score: {combined_score} | Goal: {env.goal_block} | Step: {step}/{steps_per_rollout} | Reward Shaping: {env.reward_shaping_fns}')
             step += 1
         
         env.close()  

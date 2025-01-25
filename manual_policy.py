@@ -32,7 +32,6 @@ class ManualPolicy:
         ), f"Manual Policy only applied to agent: {self.agent}, but got tag for {agent}."
 
         # set the default action
-
         key = ''
         while not key or key not in self.action_mapping:
             key = input(f'Agent {agent} input:\n')

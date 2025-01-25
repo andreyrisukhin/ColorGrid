@@ -18,13 +18,11 @@ from dataclasses import dataclass
 from enum import Enum
 from copy import copy, deepcopy
 
-
 class Moves(Enum):
     UP = 0
     DOWN = 1
     LEFT = 2
     RIGHT = 3
-
 
 class Boundary(Enum):
     # Invariant: bounds are inclusive
@@ -33,12 +31,10 @@ class Boundary(Enum):
     x2 = 31
     y2 = 31
 
-
 xBoundary = Boundary.x2.value + 1 - Boundary.x1.value
 yBoundary = Boundary.y2.value + 1 - Boundary.y1.value
 NUM_COLORS = 3
 NUM_MOVES = 4
-
 
 class IDs(Enum):
     RED = 0
@@ -64,9 +60,6 @@ class Agent:
     x_limit_high: int
     y_limit_low: int
     y_limit_high: int
-
-    # collected_blocks_goal: int = 0
-    # collected_blocks_incorrect: int = 0
 
     def is_legal(self, x:int, y:int) -> bool:
         '''Check if the agent is within the (inclusive!) bounds of the environment.'''
@@ -113,15 +106,11 @@ class ColorMazeRewards():
     def potential_field(self, agents: dict[str, Agent], rewards, blocks: torch.Tensor, goal_block: IDs, incorrect_penalty_coef: float = 1, **kwargs):
         '''Reward the leader and follower based on their proximity to goal and incorrect blocks. Inspired by (+), (-) electric potential.'''
         assert isinstance(blocks, torch.Tensor)
-        incorrect_discount_factor = 0.5 # There are twice as many incorrect as correct blocks.
         discount_factor = 0.2 # The most rewarding* spot (surrounded by 4) is less rewarding than one goal block pickup.
         # *Technically, surrounded by infinitely many goal blocks is most rewarding. Do the math to tune later, this is unlikely and we have 48 hours.
         leader = agents["leader"]
         follower = agents["follower"]
-        # breakpoint()
-        # goal_positions = np.argwhere(blocks[goal_block.value] == 1) # Returns an array of [x,y] arrays. # TODO check that x, y are not being misinterpreted. #.flatten()
         goal_positions = torch.nonzero(blocks[goal_block.value] == 1, as_tuple=False)
-        # TODO convert numpy to tensors
         goal_positions_x = goal_positions[:, 0]
         goal_positions_y = goal_positions[:, 1]
         leader_x_rep = torch.full_like(goal_positions_x, leader.x)
@@ -204,8 +193,6 @@ class ColorMaze(ParallelEnv):
         self._n_channels = self.blocks.shape[0] + 2  # len(self.possible_agents)  # 5: 1 channel for each block color + 1 for each agent
         board_space = Box(low=0, high=1, shape=(self._n_channels, xBoundary, yBoundary), dtype=np.int32)
         self._observation_space = board_space
-
-        # Spaces
         goal_block_space = MultiDiscrete([2] * NUM_COLORS)
 
         if leader_only:
@@ -259,9 +246,9 @@ class ColorMaze(ParallelEnv):
         if not self.leader_only:
             follower_position[0, self.follower.x, self.follower.y] = 1
 
-        # self.blocks.shape = (3, 32, 32)
-        # leader_position.shape = (1, 32, 32)
-        # follower_position.shape = (1, 32, 32)
+        # self.blocks.shape is (3, 32, 32)
+        # leader_position.shape is (1, 32, 32)
+        # follower_position.shape is (1, 32, 32)
 
         observation = torch.cat((self.blocks, leader_position, follower_position), dim=0)
 
@@ -393,10 +380,6 @@ class ColorMaze(ParallelEnv):
         if not self.leader_only:
             follower_position[0, self.follower.x, self.follower.y] = 1
 
-        # self.blocks.shape = (3, 32, 32)
-        # leader_position.shape = (1, 32, 32)
-        # follower_position.shape = (1, 32, 32)
-
         observation = torch.cat((self.blocks, leader_position, follower_position), dim=0)
         zero_indices = torch.argwhere(torch.all((observation[:, x_low:x_high, :] == 0), dim=0))
         i = torch.randint(low=0, high=len(zero_indices), size=(1,))
@@ -404,7 +387,6 @@ class ColorMaze(ParallelEnv):
         y = zero_indices[i, 1]
         blocks[color_idx, x, y] = 1
         return
-        assert False, "No cell with value 0 found to update."
 
     def step(self, actions):
         """
@@ -483,7 +465,6 @@ class ColorMaze(ParallelEnv):
         self.timestep += 1
 
         # Formatting by agent for the return types
-
         if (self.agents == []):
             assert False
         terminateds = {a: termination for a in self.agents}        
@@ -494,7 +475,7 @@ class ColorMaze(ParallelEnv):
             assert False
 
         # Maybe update goal block
-        self.goal_switched = False # TODO what is this doing? unclear
+        self.goal_switched = False
         self._maybe_randomize_goal_block()
 
         observation = self._convert_to_observation(self.blocks)
@@ -521,26 +502,6 @@ class ColorMaze(ParallelEnv):
             }
         truncateds = terminateds
         return observations, individual_rewards, terminateds, truncateds, infos, blocks_collected
-
-    # def render(self):
-    #     """Render the environment."""
-    #     grid = np.full((Boundary.x2.value + 1, Boundary.y2.value + 1), ".")
-    #     grid[self.leader.x, self.leader.y] = "L"
-    #     if not self.leader_only:
-    #         grid[self.follower.x, self.follower.y] = "F"
-    #     for x, y in np.argwhere(self.blocks[IDs.RED.value].cpu().numpy()):
-    #         grid[x, y] = "R"
-    #     for x, y in np.argwhere(self.blocks[IDs.GREEN.value].cpu().numpy()):
-    #         grid[x, y] = "G"
-    #     for x, y in np.argwhere(self.blocks[IDs.BLUE.value].cpu().numpy()):
-    #         grid[x, y] = "B"
-
-    #     # Flip it so y is increasing upwards
-    #     grid = np.flipud(grid.T)
-    #     rendered = ""
-    #     for row in grid:
-    #         rendered += "".join(row) + "\n"
-    #     print(rendered)
 
     def print_with_goal_color(self, element, goal_index):
         """Print the element with color if it matches the goal index."""
@@ -591,3 +552,4 @@ class ColorMaze(ParallelEnv):
     def set_goal_block(self, goal_block: IDs):
         """Set the goal block for the environment. Used by render only!!! Dangerous otherwise."""
         self.goal_block = goal_block
+        

@@ -3,10 +3,6 @@ from fire import Fire
 
 from color_maze import ColorMaze, IDs, Colors
 
-
-
-# goal_string = f'{colors.IDs(goal_idx)}{goal_idx}{colors.DEFAULT'
-
 # Function to print text with color based on the goal index
 def print_goal_with_color(goal_idx):
     if goal_idx == IDs.RED.value:

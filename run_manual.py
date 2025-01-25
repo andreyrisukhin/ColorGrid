@@ -10,7 +10,7 @@ if __name__ == "__main__":
     os.system('cls' if os.name == 'nt' else 'clear')
     env = ColorMaze(is_unique_hemispheres_env=False, block_swap_prob=0.25)
     observations, _ = env.reset(seed=42)
-    a_star_policy = AStarAgent(env, agent_id=0)
+    a_star_policy = AStarAgent(env)
     manual_policy_1 = ManualPolicy(env, agent_id=1)
     env.render()
     score = 0
@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     while env.agents and step < steps_per_rollout:
         actions = {
-            'leader': a_star_policy(observations[env.agents[0]], agent=env.agents[0]),
+            'leader': a_star_policy(env, env.leader),
             'follower': manual_policy_1(observations[env.agents[1]], agent=env.agents[1])
         }
         observations, rewards, _, _, _ = env.step(actions)

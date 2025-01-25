@@ -1,6 +1,5 @@
 import heapq
 import numpy as np
-# from color_maze import Moves, IDs
 import color_maze
 import torch
 
@@ -16,12 +15,9 @@ def a_star_search(env, agent):
     """
     blocks = env.blocks
     start_pos = torch.tensor([agent.x, agent.y], device=env.device)
-    # print(start_pos)
     goal_block = env.goal_block.value
     goal_positions = torch.nonzero(blocks[goal_block] == 1, as_tuple=True)
-    # breakpoint()
     
-    # Inv: There should always be correct blocks
     if len(goal_positions[0]) == 0:
         assert False, "No correct blocks found"
 
@@ -30,8 +26,6 @@ def a_star_search(env, agent):
     goal_dists = heuristic(start_pos.repeat(goal_positions_tensor.shape[0], 1), goal_positions_tensor)
     closest_goal_idx = torch.argmin(goal_dists)
     goal_pos = goal_positions_tensor[closest_goal_idx]
-    # convert goal_pos to tuple
-    # target = tuple(goal_pos.tolist())
 
     # Initialize the open and closed sets
     open_set = [(0 + heuristic(start_pos, goal_pos).item(), start_pos.tolist(), [])]
@@ -137,5 +131,5 @@ class AStarAgent:
             return np.random.choice([color_maze.Moves.UP.value, color_maze.Moves.DOWN.value, color_maze.Moves.LEFT.value, color_maze.Moves.RIGHT.value])
         
         next_cell = a_star_search(env, agent)[0] # we only need the next step to move
-        # TODO for later: only run a_star_search if the goal color just switched or a block was just picked up
+        # Optimization is to only run a_star_search if the goal color just switched or a block was just picked up
         return get_move(cur_pos, next_cell)
